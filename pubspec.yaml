@@ -1,0 +1,19 @@
+# https://dart.dev/tools/pub/pubspec
+name: gba
+
+# Will be added only once published.
+# description:
+# homepage:
+# repository:
+# issue_tracker:
+# documentation:
+
+environment:
+  sdk: ">=2.8.4 <3.0.0"
+
+dependencies:
+  meta:
+  pedantic:
+
+dev_dependencies:
+  test:
