@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:binary/binary.dart';
+import 'package:gba/src/util.dart';
 
 import 'mode.dart';
 
@@ -66,21 +67,101 @@ class Arm7TdmiRegisters {
     _cpsrWrapper = CPSR._(this);
   }
 
+  /// Returns a debuggable label for the given [index].
+  String labelRegister(int index) {
+    RangeError.checkValueInInterval(index, 0, 15);
+    if (index <= 7) {
+      return 'r$index';
+    }
+    final mode = cpsr.mode;
+    if (index >= 8 && index <= 12) {
+      if (mode == Arm7TdmiProcessorMode.fiq) {
+        return 'r${index}_fiq';
+      } else {
+        return 'r$index';
+      }
+    }
+    if (index >= 13 && index <= 14) {
+      switch (mode) {
+        case Arm7TdmiProcessorMode.user:
+        case Arm7TdmiProcessorMode.system:
+          return index == 13 ? 'SP' : 'LR';
+        case Arm7TdmiProcessorMode.fiq:
+          return 'r${index}_fiq';
+        case Arm7TdmiProcessorMode.svc:
+          return 'r${index}_svc';
+        case Arm7TdmiProcessorMode.abt:
+          return 'r${index}_abt';
+        case Arm7TdmiProcessorMode.irq:
+          return 'r${index}_irq';
+        case Arm7TdmiProcessorMode.und:
+          return 'r${index}_und';
+        default:
+          throw StateError('Invalid mode: $mode');
+      }
+    }
+    if (index == 15) {
+      return 'PC';
+    }
+    throw StateError('Execution should never occur here: $index.');
+  }
+
   /// If a specific operating mode is in effect, returns [index] re-written.
-  int _redirectToBankedRegister(int index) => index;
+  int _redirectToBankedRegister(int index) {
+    // r0 -> r7 is not directed. PC is not directed. CPSR is not directed.
+    if (index <= 7 || index == 15 || index == 16) {
+      return index;
+    }
+    // r8 -> r12 is redirected in FIQ mode.
+    final mode = cpsr.mode;
+    if (index >= 8 && index <= 12) {
+      if (mode == Arm7TdmiProcessorMode.fiq) {
+        // r8 -- index 8 -- index 17 (+9)
+        return index + 9;
+      } else {
+        return index;
+      }
+    }
+    // r13 -> r14 is redirected in FIQ, SVC, ABT, IRQ, UND.
+    if (index >= 13 && index <= 14) {
+      switch (mode) {
+        case Arm7TdmiProcessorMode.user:
+        case Arm7TdmiProcessorMode.system:
+          return index;
+        case Arm7TdmiProcessorMode.fiq:
+          // r13 -- index 13 -- index 21 (+9)
+          return index + 9;
+        case Arm7TdmiProcessorMode.svc:
+          // r13 -- index 13 -- index 25 (+12)
+          return index + 12;
+        case Arm7TdmiProcessorMode.abt:
+          // r13 -- index 13 -- index 28 (+15)
+          return index + 15;
+        case Arm7TdmiProcessorMode.irq:
+          // r13 -- index 13 -- index 31 (+18)
+          return index + 18;
+        case Arm7TdmiProcessorMode.und:
+          // r13 -- index 13 -- index 34 (+21)
+          return index + 21;
+        default:
+          throw StateError('Invalid mode: $mode');
+      }
+    }
+    throw RangeError.range(index, 0, 16);
+  }
 
   /// An unchecked version of `operator []` for internal use.
-  Int32 _read(int index) {
-    return _data[_redirectToBankedRegister(index)].asInt32();
+  Uint32 _read(int index) {
+    return _data[_redirectToBankedRegister(index)].asUint32();
   }
 
   /// An unchecked version of `operator []=` for internal use.
-  void _write(int index, Int32 value) {
+  void _write(int index, Uint32 value) {
     _data[_redirectToBankedRegister(index)] = value.value;
   }
 
   /// Reads the data stored at register [index], from `0` to `15`.
-  Int32 operator [](int index) {
+  Uint32 operator [](int index) {
     if (index > 15) {
       throw RangeError.value(index, 'index', 'Can only access up to r15.');
     }
@@ -88,7 +169,7 @@ class Arm7TdmiRegisters {
   }
 
   /// Writes the data to store at register [index], from `0` to `15`.
-  void operator []=(int index, Int32 value) {
+  void operator []=(int index, Uint32 value) {
     if (index > 15) {
       throw RangeError.value(index, 'index', 'Can only access up to r15.');
     }
@@ -107,8 +188,8 @@ class Arm7TdmiRegisters {
   /// IRQ:          0x03007FA0
   /// Supervisor:   0x03007FE0
   /// ```
-  Int32 get sp => _read(_sp);
-  set sp(Int32 sp) => _write(_sp, sp);
+  Uint32 get sp => _read(_sp);
+  set sp(Uint32 sp) => _write(_sp, sp);
 
   static const _lr = 14;
 
@@ -116,8 +197,8 @@ class Arm7TdmiRegisters {
   ///
   /// Used primarily to store the address following a "bl" (_branch and link_)
   /// instruction (as used in function calls).
-  Int32 get lr => _read(_lr);
-  set lr(Int32 lr) => _write(_lr, lr);
+  Uint32 get lr => _read(_lr);
+  set lr(Uint32 lr) => _write(_lr, lr);
 
   static const _pc = 15;
 
@@ -126,8 +207,8 @@ class Arm7TdmiRegisters {
   /// Because the ARM7/TDMI uses a 3-stage pipeline ("fetch", "decode"
   /// "execute"), this register always contains an address which is 2
   /// instructions ahead of the one currrently being executed.
-  Int32 get pc => _read(_pc);
-  set pc(Int32 pc) => _write(_pc, pc);
+  Uint32 get pc => _read(_pc);
+  set pc(Uint32 pc) => _write(_pc, pc);
 
   static const _cpsr = 16;
 
@@ -163,12 +244,12 @@ class CPSR {
   const CPSR._(this._registers);
 
   /// Raw value of the register.
-  Int32 get _value => _registers._read(Arm7TdmiRegisters._cpsr);
-  set _value(Int32 value) => _registers._write(Arm7TdmiRegisters._cpsr, value);
+  Uint32 get value => _registers._read(Arm7TdmiRegisters._cpsr);
+  set value(Uint32 value) => _registers._write(Arm7TdmiRegisters._cpsr, value);
 
   /// The operating mode, bits `4` -> `0` in the CPSR.
   Arm7TdmiProcessorMode get mode {
-    final value = _value.bitRange(4, 0).value;
+    final value = this.value.bitRange(4, 0).value;
     for (final mode in Arm7TdmiProcessorMode.values) {
       if (mode.bits == value) {
         return mode;
@@ -177,7 +258,115 @@ class CPSR {
     throw StateError('Unexpected mode bits: ${value.toBinaryPadded(5)}.');
   }
 
-  set mode(Arm7TdmiProcessorMode mode) {
-    _value = _value.replaceBitRange(4, 0, mode.bits);
+  set mode(Arm7TdmiProcessorMode newMode) {
+    switch (newMode) {
+      case Arm7TdmiProcessorMode.user:
+      case Arm7TdmiProcessorMode.system:
+        break;
+      default:
+        _saveCPSR(newMode);
+    }
+    // Actually write the current bits.
+    value = value.replaceBitRange(4, 0, newMode.bits);
+  }
+
+  static const _spsrFiq = 24;
+  static const _spsrSvc = 27;
+  static const _spsrAbt = 30;
+  static const _spsrIrq = 33;
+  static const _spsrUnd = 36;
+
+  /// Writes a copy of the CPSR to SPSR_{mode} (where `{mode}` is [mode]).
+  void _saveCPSR(Arm7TdmiProcessorMode mode) {
+    int index;
+    switch (mode) {
+      case Arm7TdmiProcessorMode.fiq:
+        index = _spsrFiq;
+        break;
+      case Arm7TdmiProcessorMode.svc:
+        index = _spsrSvc;
+        break;
+      case Arm7TdmiProcessorMode.abt:
+        index = _spsrAbt;
+        break;
+      case Arm7TdmiProcessorMode.irq:
+        index = _spsrIrq;
+        break;
+      case Arm7TdmiProcessorMode.und:
+        index = _spsrUnd;
+        break;
+      default:
+        throw StateError('Invalid: $mode');
+    }
+    _registers._data[index] = value.value;
+  }
+
+  static const _T = 5;
+  static const _F = 6;
+  static const _I = 7;
+  static const _V = 28;
+  static const _C = 29;
+  static const _Z = 30;
+  static const _N = 31;
+
+  /// Thumb state indicator.
+  ///
+  /// If set (`true`), the CPU is in `THUMB` state. Otherwise it operates in
+  /// normal `ARM` state. Software should never attempted to modify this bit
+  /// itself.
+  bool get thumb => value.isSet(_T);
+  set thumb(bool thumb) {
+    value = thumb ? value.setBit(_T) : value.clearBit(_T);
+  }
+
+  /// FIQ interrupt disable.
+  ///
+  /// Set this (to `true`) in order to disable FIQ interrupts.
+  bool get disableFiq => value.isSet(_F);
+  set disableFiq(bool disable) {
+    value = disable ? value.setBit(_F) : value.clearBit(_F);
+  }
+
+  /// IRQ interrupt disable.
+  ///
+  /// Set this (to `true`) in order to disable IRQ interrupts.
+  ///
+  /// > NOTE: On the GBA this is set by default whenevner IRQ mode is entered.
+  bool get disableIrq => value.isSet(_I);
+  set disableIrq(bool disable) {
+    value = disable ? value.setBit(_I) : value.clearBit(_I);
+  }
+
+  /// Overflow (`V`) condition code.
+  bool get overflow => value.isSet(_V);
+  set overflow(bool overflow) {
+    value = overflow ? value.setBit(_V) : value.clearBit(_V);
+  }
+
+  /// Carry/Borrow/Extend (`C`) condition code.
+  bool get carryBorrowExtend => value.isSet(_C);
+  set carryBorrowExtend(bool carryBorrowExtend) {
+    value = carryBorrowExtend ? value.setBit(_C) : value.clearBit(_C);
+  }
+
+  /// Overflow (`Z`) condition code.
+  bool get zeroEqual => value.isSet(_Z);
+  set zeroEqual(bool zeroEqual) {
+    value = zeroEqual ? value.setBit(_Z) : value.clearBit(_Z);
+  }
+
+  /// Negative/Less than (`N`) condition code.
+  bool get negativeLessThan => value.isSet(_N);
+  set negativeLessThan(bool negativeLessThan) {
+    value = negativeLessThan ? value.setBit(_N) : value.clearBit(_N);
+  }
+
+  @override
+  String toString() {
+    if (assertionsEnabled) {
+      return 'CPSR {${value.toBinaryPadded()}}';
+    } else {
+      return super.toString();
+    }
   }
 }

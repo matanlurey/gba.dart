@@ -16,7 +16,7 @@ enum Arm7TdmiProcessorMode {
   /// ## Banked registers
   ///
   /// - `r{8...14}_fiq` replace `r{8...14}`.
-  /// - Current `CPSR` gets svaed into the `SPSR_fiq` register.
+  /// - Current `CPSR` gets saved into the `SPSR_fiq` register.
   fiq,
 
   /// This mode is entered when an _interrupt request_ is triggered.
