@@ -181,20 +181,3 @@ class CPSR {
     _value = _value.replaceBitRange(4, 0, mode.bits);
   }
 }
-
-extension on Int32 {
-  // TODO(https://github.com/matanlurey/binary.dart/issues/5).
-  Int32 replaceBitRange(int left, int right, int bits) {
-    var value = this.value;
-    final length = left - right + 1;
-    for (var i = 0; i < length; i++) {
-      final index = left - i;
-      if (bits.isSet(length - i)) {
-        value = value.setBit(index);
-      } else {
-        value = value.clearBit(index);
-      }
-    }
-    return Int32(value);
-  }
-}
