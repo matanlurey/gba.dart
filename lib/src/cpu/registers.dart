@@ -185,8 +185,8 @@ class CPSR {
 extension on Int32 {
   // TODO(https://github.com/matanlurey/binary.dart/issues/5).
   Int32 replaceBitRange(int left, int right, int bits) {
-    final length = left - right + 1;
     var value = this.value;
+    final length = left - right + 1;
     for (var i = 0; i < length; i++) {
       final index = left - i;
       if (bits.isSet(length - i)) {
