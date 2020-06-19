@@ -12,8 +12,12 @@ environment:
   sdk: ">=2.8.4 <3.0.0"
 
 dependencies:
+  binary:
+    git:
+      url: git@github.com:matanlurey/binary.dart.git
+      ref: 1.0.0
   meta:
-  pedantic:
 
 dev_dependencies:
+  pedantic:
   test:
