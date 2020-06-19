@@ -15,7 +15,6 @@ dependencies:
   binary:
     git:
       url: git@github.com:matanlurey/binary.dart.git
-      ref: 1.0.0
   meta:
 
 dev_dependencies:
