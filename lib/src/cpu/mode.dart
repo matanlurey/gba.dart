@@ -70,6 +70,8 @@ enum Arm7TdmiProcessorMode {
 
 extension Arm7TdmiProcessorModeValues on Arm7TdmiProcessorMode {
   /// Returns the exact bit-backed value (as an [int]) for the current mode.
+  ///
+  /// See https://www.cs.rit.edu/~tjh8300/CowBite/CowBiteSpec.htm#User.
   int get bits {
     switch (this) {
       case Arm7TdmiProcessorMode.user:
