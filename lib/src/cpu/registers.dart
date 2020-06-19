@@ -161,6 +161,17 @@ class Arm7TdmiRegisters {
   }
 
   /// Reads the data stored at register [index], from `0` to `15`.
+  ///
+  /// `0` to `12` are considered the "general purpose" registers, and each has
+  /// the same functionality and performance, i.e. there is no "fast
+  /// accumulator" for arithmetic operations, and no "special pointer register"
+  /// for memory addressing.
+  ///
+  /// However, in [CPSR.thumb] mode, only r0 -> r7 ("lo registers") may be
+  /// accessed freely, while r8 -> 12, and up ("hi registers") can only be
+  /// accesssed by some instructions.
+  ///
+  /// See [sp] for `13`, [lr] for `14`, [pc] for `15`, and [cpsr] for `16`.
   Uint32 operator [](int index) {
     if (index > 15) {
       throw RangeError.value(index, 'index', 'Can only access up to r15.');
@@ -169,6 +180,17 @@ class Arm7TdmiRegisters {
   }
 
   /// Writes the data to store at register [index], from `0` to `15`.
+  ///
+  /// `0` to `12` are considered the "general purpose" registers, and each has
+  /// the same functionality and performance, i.e. there is no "fast
+  /// accumulator" for arithmetic operations, and no "special pointer register"
+  /// for memory addressing.
+  ///
+  /// However, in [CPSR.thumb] mode, only r0 -> r7 ("lo registers") may be
+  /// accessed freely, while r8 -> 12, and up ("hi registers") can only be
+  /// accesssed by some instructions.
+  ///
+  /// See [sp] for `13`, [lr] for `14`, [pc] for `15`, and [cpsr] for `16`.
   void operator []=(int index, Uint32 value) {
     if (index > 15) {
       throw RangeError.value(index, 'index', 'Can only access up to r15.');
@@ -180,7 +202,12 @@ class Arm7TdmiRegisters {
 
   /// The value at `r13`, also known as the _Stack Pointer_ (register).
   ///
-  /// Used primarily for maintaining the address of the stack.
+  /// Used primarily for maintaining the address of the stack. While in `ARM`
+  /// state the user may decide to use `r13` and/or other register(s) as stack
+  /// pointer(s), or as a general purpose register.
+  ///
+  /// There's a separate `r13` register for each [CPSR.mode], and (when used as
+  /// `SP`) each exception handler **must** use its own stack.
   ///
   /// The default value (initialized by the BIOS) differs depending on the mode:
   /// ```txt
@@ -195,8 +222,12 @@ class Arm7TdmiRegisters {
 
   /// The value at `r14`, also known as the _Link Register_.
   ///
-  /// Used primarily to store the address following a "bl" (_branch and link_)
-  /// instruction (as used in function calls).
+  /// Used primarily to store the address following a `BL` (_Branch with Link_)
+  /// instruction (as used in function calls) - i.e. the old value of [pc] is
+  /// saved in this register.
+  ///
+  /// > NOTE: In `ARM` mode, `r14` may be used as a general purpose register
+  /// > also, provided that usage as a `LR` regsiter isn't required.
   Uint32 get lr => _read(_lr);
   set lr(Uint32 lr) => _write(_lr, lr);
 
