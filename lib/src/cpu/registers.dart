@@ -43,7 +43,7 @@ class Arm7TdmiRegisters {
   /// Create a new default [Arm7TdmiRegisters] instance and state.
   factory Arm7TdmiRegisters() {
     final data = Uint32List(totalRegisters);
-    data[_cpsr] = Arm7TdmiProcessorMode.user.bits;
+    data[_CPSR] = Arm7TdmiProcessorMode.user.bits;
     return Arm7TdmiRegisters._(data);
   }
 
@@ -198,7 +198,10 @@ class Arm7TdmiRegisters {
     return _write(index, value);
   }
 
-  static const _sp = 13;
+  static const _SP = 13;
+  static const _LR = 14;
+  static const _PC = 15;
+  static const _CPSR = 16;
 
   /// The value at `r13`, also known as the _Stack Pointer_ (register).
   ///
@@ -215,10 +218,8 @@ class Arm7TdmiRegisters {
   /// IRQ:          0x03007FA0
   /// Supervisor:   0x03007FE0
   /// ```
-  Uint32 get sp => _read(_sp);
-  set sp(Uint32 sp) => _write(_sp, sp);
-
-  static const _lr = 14;
+  Uint32 get sp => _read(_SP);
+  set sp(Uint32 sp) => _write(_SP, sp);
 
   /// The value at `r14`, also known as the _Link Register_.
   ///
@@ -228,20 +229,16 @@ class Arm7TdmiRegisters {
   ///
   /// > NOTE: In `ARM` mode, `r14` may be used as a general purpose register
   /// > also, provided that usage as a `LR` regsiter isn't required.
-  Uint32 get lr => _read(_lr);
-  set lr(Uint32 lr) => _write(_lr, lr);
-
-  static const _pc = 15;
+  Uint32 get lr => _read(_LR);
+  set lr(Uint32 lr) => _write(_LR, lr);
 
   /// The value at `r15`, also known as the _Program Counter_.
   ///
   /// Because the ARM7/TDMI uses a 3-stage pipeline ("fetch", "decode"
   /// "execute"), this register always contains an address which is 2
   /// instructions ahead of the one currrently being executed.
-  Uint32 get pc => _read(_pc);
-  set pc(Uint32 pc) => _write(_pc, pc);
-
-  static const _cpsr = 16;
+  Uint32 get pc => _read(_PC);
+  set pc(Uint32 pc) => _write(_PC, pc);
 
   /// The value at `r16`, also known as the _Current Program Status Regsiter_.
   ///
@@ -275,8 +272,8 @@ class CPSR {
   const CPSR._(this._registers);
 
   /// Raw value of the register.
-  Uint32 get value => _registers._read(Arm7TdmiRegisters._cpsr);
-  set value(Uint32 value) => _registers._write(Arm7TdmiRegisters._cpsr, value);
+  Uint32 get value => _registers._read(Arm7TdmiRegisters._CPSR);
+  set value(Uint32 value) => _registers._write(Arm7TdmiRegisters._CPSR, value);
 
   /// The operating mode, bits `4` -> `0` in the CPSR.
   Arm7TdmiProcessorMode get mode {
