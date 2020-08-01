@@ -1,19 +1,17 @@
-# https://dart.dev/tools/pub/pubspec
 name: gba
 
-# Will be added only once published.
-# description:
-# homepage:
-# repository:
-# issue_tracker:
-# documentation:
+description: >
+  Emulator components for the Gameboy Advance, written in cross-platform Dart.
+
+homepage: https://github.com/matanlurey/gba.dart
 
 environment:
   sdk: ">=2.8.4 <3.0.0"
 
 dependencies:
-  meta:
-  pedantic:
+  meta: ^1.1.8
 
 dev_dependencies:
-  test:
+  pedantic: ^1.9.0
+  test: ^1.15.0
+  test_coverage: ^0.4.1
